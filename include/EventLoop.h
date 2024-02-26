@@ -11,6 +11,8 @@ extern std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt> ringbuffer_sink;
 extern std::vector<spdlog::sink_ptr> sinks;
 extern std::shared_ptr<spdlog::logger> logger;
 
+class Channel;
+
 class EventLoop {
 public:
   EventLoop();
@@ -26,6 +28,8 @@ public:
   }
 
   void assertInLoopThread();
+
+  void updateChannel(Channel *channel);
 
 private:
   thread_id_t m_thread_id;
