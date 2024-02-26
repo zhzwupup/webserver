@@ -9,19 +9,22 @@
 #include <string>
 #include <thread>
 
+#include "spdlog/sinks/stdout_sinks.h"
+
 extern thread_local EventLoop *t_loopInThisThread;
 
 std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt> ringbuffer_sink =
     std::make_shared<spdlog::sinks::ringbuffer_sink_mt>(5);
 std::vector<spdlog::sink_ptr> sinks;
 std::shared_ptr<spdlog::logger> logger;
+auto console = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 
 TEST_CASE("EventLoop Constructor") {
   ringbuffer_sink->set_pattern("%v");
   sinks.push_back(ringbuffer_sink);
+  // sinks.push_back(console);
   logger = std::make_shared<spdlog::logger>("logger_name", std::begin(sinks),
                                             std::end(sinks));
-  sinks.push_back(ringbuffer_sink);
 
   SUBCASE("Normally constructed") {
     t_loopInThisThread = nullptr;
@@ -39,6 +42,48 @@ TEST_CASE("EventLoop Constructor") {
     buf << "Another EventLoop " << t_loopInThisThread
         << " exists in this thread " << std::this_thread::get_id() << "\n";
     std::string expected = buf.str();
+    CHECK(text == expected);
+  }
+}
+
+TEST_CASE("Create EventLoop and Run loop") {
+  ringbuffer_sink->set_pattern("%v");
+  sinks.push_back(ringbuffer_sink);
+  logger = std::make_shared<spdlog::logger>("logger_name", std::begin(sinks),
+                                            std::end(sinks));
+
+  SUBCASE("Create and Run EventLoop in same thread") {
+    EventLoop loop;
+    loop.loop();
+
+    std::string text = ringbuffer_sink->last_formatted().back();
+    std::stringstream buf;
+    buf << "EventLoop run in thread " << std::this_thread::get_id() << "\n";
+    std::string expected = buf.str();
+    CHECK(text == expected);
+
+    auto threadFunc = []() {
+      EventLoop loop;
+      loop.loop();
+    };
+    std::thread thrd(threadFunc);
+    buf.clear();
+    buf.str("");
+    buf << "EventLoop run in thread " << thrd.get_id() << "\n";
+    expected = buf.str();
+    thrd.join();
+    text = ringbuffer_sink->last_formatted().back();
+    CHECK(text == expected);
+  }
+
+  SUBCASE("Run EventLoop in another thread") {
+    EventLoop loop;
+    auto threadFunc = [&loop]() { loop.loop(); };
+    std::thread thrd(threadFunc);
+    std::string expected{"Run in error thread, should abort\n"};
+    thrd.join();
+
+    std::string text = ringbuffer_sink->last_formatted().back();
     CHECK(text == expected);
   }
 }

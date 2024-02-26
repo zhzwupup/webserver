@@ -21,6 +21,12 @@ public:
 
   void loop();
 
+  bool isInLoopThread() const {
+    return m_thread_id == std::this_thread::get_id();
+  }
+
+  void assertInLoopThread();
+
 private:
   thread_id_t m_thread_id;
   std::atomic_bool m_looping;

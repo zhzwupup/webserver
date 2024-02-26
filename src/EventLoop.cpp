@@ -24,3 +24,21 @@ EventLoop::~EventLoop() {
   assert(!m_looping);
   t_loopInThisThread = nullptr;
 }
+
+void EventLoop::assertInLoopThread() {
+  if (!isInLoopThread()) {
+    // abort();
+    logger->critical("Run in error thread, should abort");
+  }
+}
+void EventLoop::loop() {
+  assert(!m_looping);
+  assertInLoopThread();
+  m_looping = true;
+  if (isInLoopThread()) {
+    std::stringstream msg_buf;
+    msg_buf << "EventLoop run in thread " << m_thread_id;
+    logger->info(msg_buf.str());
+  }
+  m_looping = false;
+}
