@@ -12,6 +12,8 @@ Channel::Channel(EventLoop *loop, int fd)
 
 void Channel::update() { m_loop->updateChannel(this); }
 
+void Channel::remove() { m_loop->removeChannel(this); }
+
 void Channel::handleEvent() {
   if ((m_revents & EPOLLHUP) and not(m_revents & EPOLLIN)) {
     if (m_closeCallback) {

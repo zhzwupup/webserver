@@ -18,14 +18,22 @@ public:
   Channel(EventLoop *loop, int fd);
 
   void handleEvent();
-  void setReadCallback(const EventCallback &cb) { m_readCallback = cb; }
-  void setWriteCallback(const EventCallback &cb) { m_writeCallback = cb; }
-  void setErrorCallback(const EventCallback &cb) { m_errorCallback = cb; }
+  void setReadCallback(const EventCallback &cb) {
+    m_readCallback = std::move(cb);
+  }
+  void setWriteCallback(const EventCallback &cb) {
+    m_writeCallback = std::move(cb);
+  }
+  void setCloseCallback(const EventCallback &cb) {
+    m_closeCallback = std::move(cb);
+  }
+  void setErrorCallback(const EventCallback &cb) {
+    m_errorCallback = std::move(cb);
+  }
 
   int fd() const { return m_fd; }
   int events() const { return m_events; }
   void set_revents(int revt) { m_revents = revt; }
-  bool isNoneEvent() const { return m_events == kNoneEvent; }
 
   void enableReading() {
     m_events |= kReadEvent;
@@ -44,10 +52,15 @@ public:
     update();
   }
 
+  bool isNoneEvent() const { return m_events == kNoneEvent; }
+  bool isWriting() const { return m_events & kWriteEvent; }
+  bool isReading() const { return m_events & kReadEvent; }
+
   int state() { return m_state; }
   void set_state(int state) { m_state = state; }
 
   EventLoop *ownerLoop() { return m_loop; }
+  void remove();
 
 private:
   void update();
