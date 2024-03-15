@@ -12,6 +12,7 @@ extern std::vector<spdlog::sink_ptr> sinks;
 extern std::shared_ptr<spdlog::logger> logger;
 
 class Channel;
+class Poller;
 
 class EventLoop {
 public:
@@ -31,7 +32,20 @@ public:
 
   void updateChannel(Channel *channel);
 
+  void wakeup();
+
 private:
+  using ChannelList = std::vector<Channel *>;
+  void handleRead();
   thread_id_t m_thread_id;
   std::atomic_bool m_looping;
+  std::atomic_bool m_quit;
+
+  std::unique_ptr<Poller> poller_;
+
+  // 从 EventLoop::loop() 的 epoll_wait() 阻塞中唤醒，立刻执行用户回调
+  int wakeupFd_;
+  std::unique_ptr<Channel> wakeupChannel_;
+
+  ChannelList m_activeChannels;
 };

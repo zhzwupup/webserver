@@ -1,8 +1,8 @@
+#pragma once
 #include <functional>
 #include <memory>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
-
 
 extern std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt> ringbuffer_sink;
 extern std::vector<spdlog::sink_ptr> sinks;
@@ -44,8 +44,8 @@ public:
     update();
   }
 
-  int index() { return m_index; }
-  void set_index(int idx) { m_index = idx; }
+  int state() { return m_state; }
+  void set_state(int state) { m_state = state; }
 
   EventLoop *ownerLoop() { return m_loop; }
 
@@ -60,9 +60,10 @@ private:
   const int m_fd;
   int m_events;
   int m_revents;
-  int m_index;
+  int m_state;
 
   EventCallback m_readCallback;
   EventCallback m_writeCallback;
+  EventCallback m_closeCallback;
   EventCallback m_errorCallback;
 };
