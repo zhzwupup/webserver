@@ -67,6 +67,32 @@ void EventLoop::loop() {
   m_looping = false;
 }
 
+void EventLoop::quit() {
+  m_quit = true;
+  if (!isInLoopThread()) {
+    wakeup();
+  }
+}
+
+void EventLoop::runInLoop(Functor cb) {
+  if (isInLoopThread()) {
+    cb();
+  } else {
+    queueInLoop(cb);
+  }
+}
+
+void EventLoop::queueInLoop(Functor cb) {
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    pendingFunctors_.emplace_back(cb);
+  }
+
+  if (!isInLoopThread() or callingPendingFunctors_) {
+    wakeup();
+  }
+}
+
 void EventLoop::wakeup() {
   uint64_t one = 1;
   ssize_t n = write(wakeupFd_, &one, sizeof(one));
@@ -86,4 +112,8 @@ void EventLoop::handleRead() {
 
 void EventLoop::updateChannel(Channel *channel) {
   poller_->updateChannel(channel);
+}
+
+void EventLoop::removeChannel(Channel *channel) {
+  poller_->removeChannel(channel);
 }

@@ -16,6 +16,8 @@ class Poller;
 
 class EventLoop {
 public:
+  using Functor = std::function<void()>;
+
   EventLoop();
   ~EventLoop();
 
@@ -23,6 +25,11 @@ public:
   EventLoop &operator=(const EventLoop &) = delete;
 
   void loop();
+  void quit();
+
+  void runInLoop(Functor cb);
+
+  void queueInLoop(Functor cb);
 
   bool isInLoopThread() const {
     return m_thread_id == std::this_thread::get_id();
@@ -31,6 +38,7 @@ public:
   void assertInLoopThread();
 
   void updateChannel(Channel *channel);
+  void removeChannel(Channel *channel);
 
   void wakeup();
 
@@ -40,6 +48,7 @@ private:
   thread_id_t m_thread_id;
   std::atomic_bool m_looping;
   std::atomic_bool m_quit;
+  std::atomic_bool callingPendingFunctors_;
 
   std::unique_ptr<Poller> poller_;
 
@@ -48,4 +57,7 @@ private:
   std::unique_ptr<Channel> wakeupChannel_;
 
   ChannelList m_activeChannels;
+
+  std::mutex mutex_;
+  std::vector<Functor> pendingFunctors_;
 };
