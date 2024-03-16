@@ -62,10 +62,21 @@ void Poller::updateChannel(Channel *channel) {
 void Poller::fillActiveChannels(int numEvents,
                                 ChannelList *activeChannels) const {
   for (int i = 0; i < numEvents; ++i) {
-    Channel *channel = static_cast<Channel *>(events_[9].data.ptr);
+    Channel *channel = static_cast<Channel *>(events_[i].data.ptr);
     channel->set_revents(events_[i].events);
     activeChannels->push_back(channel);
   }
+}
+
+void Poller::removeChannel(Channel *channel) {
+  int fd = channel->fd();
+  channels_.erase(fd);
+
+  int state = channel->state();
+  if (state == kAdded) {
+    update(EPOLL_CTL_DEL, channel);
+  }
+  channel->set_state(kNew);
 }
 
 void Poller::update(int operation, Channel *channel) {
