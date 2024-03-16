@@ -2,6 +2,7 @@
 
 #include "Buffer.h"
 #include "Callback.h"
+#include "InetAddress.h"
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <unistd.h>
@@ -13,10 +14,16 @@ class EventLoop;
 
 class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 public:
-  TcpConnection(EventLoop *loop, int sockfd);
+  TcpConnection(EventLoop *loop, const std::string &nameArg, int sockfd,
+                const InetAddress &localAddr, const InetAddress &peerAddr);
   ~TcpConnection();
 
   EventLoop *getLoop() const { return loop_; }
+  const std::string &name() const { return name_; }
+  const InetAddress &localAddress() const { return localAddr_; }
+  const InetAddress &peerAddress() const { return peerAddr_; }
+
+  bool connected() const { return state_ == StateE::kConnected; }
 
   void send(const std::string &buf);
   void send(Buffer *buf);
@@ -48,12 +55,16 @@ private:
   void shutdownInLoop();
 
   EventLoop *loop_;
+  std::string name_;
   std::atomic<StateE> state_;
 
   bool reading_;
 
   std::unique_ptr<Channel> channel_;
   int sockfd_;
+
+  InetAddress localAddr_;
+  InetAddress peerAddr_;
 
   ConnectionCallback connectionCallback_;
   MessageCallback messageCallback_;

@@ -24,9 +24,12 @@ void shudtownWrite(int sockfd) {
   }
 }
 
-TcpConnection::TcpConnection(EventLoop *loop, int sockfd)
-    : loop_(loop), state_(StateE::kConnecting), reading_(true), sockfd_(sockfd),
-      channel_(std::make_unique<Channel>(loop, sockfd)) {
+TcpConnection::TcpConnection(EventLoop *loop, const std::string &nameArg,
+                             int sockfd, const InetAddress &localAddr,
+                             const InetAddress &peerAddr)
+    : loop_(loop), name_(nameArg), state_(StateE::kConnecting), reading_(true),
+      sockfd_(sockfd), channel_(std::make_unique<Channel>(loop, sockfd)),
+      localAddr_(localAddr), peerAddr_(peerAddr) {
   channel_->setReadCallback(std::bind(&TcpConnection::handleRead, this));
   channel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
   channel_->setCloseCallback(std::bind(&TcpConnection::handleClose, this));
