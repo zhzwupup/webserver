@@ -45,6 +45,8 @@ public:
 private:
   using ChannelList = std::vector<Channel *>;
   void handleRead();
+  void doPendingFunctors();
+
   thread_id_t m_thread_id;
   std::atomic_bool m_looping;
   std::atomic_bool m_quit;

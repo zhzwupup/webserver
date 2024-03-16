@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <sstream>
 #include <sys/eventfd.h>
@@ -52,17 +53,33 @@ void EventLoop::assertInLoopThread() {
   }
 }
 void EventLoop::loop() {
-  assert(!m_looping);
-  assertInLoopThread();
+  // assert(!m_looping);
+  // assertInLoopThread();
+  // m_looping = true;
+  // if (isInLoopThread()) {
+  //   std::stringstream msg_buf;
+  //   msg_buf << "EventLoop run in thread " << m_thread_id;
+  //   logger->info(msg_buf.str());
+  //   poller_->poll(kPollTimeMs, &m_activeChannels);
+  //   for (Channel *channel : m_activeChannels) {
+  //     channel->handleEvent();
+  //   }
+  // }
+  // m_looping = false;
+
   m_looping = true;
-  if (isInLoopThread()) {
-    std::stringstream msg_buf;
-    msg_buf << "EventLoop run in thread " << m_thread_id;
-    logger->info(msg_buf.str());
+  m_quit = false;
+
+  logger->info("EventLoop {} start looping", (void *)this);
+
+  while (!m_quit) {
+    m_activeChannels.clear();
+
     poller_->poll(kPollTimeMs, &m_activeChannels);
     for (Channel *channel : m_activeChannels) {
       channel->handleEvent();
     }
+    doPendingFunctors();
   }
   m_looping = false;
 }
@@ -116,4 +133,21 @@ void EventLoop::updateChannel(Channel *channel) {
 
 void EventLoop::removeChannel(Channel *channel) {
   poller_->removeChannel(channel);
+}
+
+void EventLoop::doPendingFunctors() {
+  std::vector<Functor> functors;
+  callingPendingFunctors_ = true;
+
+  {
+    // 添加和执行 Functor 需要加锁
+    std::unique_lock<std::mutex> lock(mutex_);
+    functors.swap(pendingFunctors_);
+  }
+
+  for (const Functor &functor : functors) {
+    functor();
+  }
+
+  callingPendingFunctors_ = false;
 }
