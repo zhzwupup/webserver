@@ -3,6 +3,7 @@
 #include "Buffer.h"
 #include "Callback.h"
 #include "InetAddress.h"
+#include <any>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <unistd.h>
@@ -29,6 +30,10 @@ public:
   void send(Buffer *buf);
 
   void shutdown();
+
+  void setContext(const std::any &context) { context_ = context; }
+
+  const std::any &getContext() const { return context_; }
 
   void setConnectionCallback(const ConnectionCallback &cb) {
     connectionCallback_ = cb;
@@ -73,4 +78,6 @@ private:
 
   Buffer inputBuffer_;
   Buffer outputBuffer_;
+
+  std::any context_;
 };
