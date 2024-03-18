@@ -50,6 +50,8 @@ public:
     }
   }
 
+  void append(const std::string &str) { append(str.data(), str.size()); }
+
   void append(const char *data, size_t len) {
     ensureWritableBytes(len);
     std::copy(data, data + len, beginWrite());
