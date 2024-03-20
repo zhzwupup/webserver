@@ -12,11 +12,13 @@ __attribute__((visibility("default"))) std::shared_ptr<spdlog::logger> logger =
 
 int main() {
   console_sink->set_level(spdlog::level::trace);
-  console_sink->set_pattern("[%^%l%$] %v");
+  // console_sink->set_pattern("[%^%l%$] %v");
   logger->set_level(spdlog::level::debug);
+  spdlog::set_pattern("[source %s] [function %!] [line %#] %v");
+
   EventLoop loop;
   HttpServer server(&loop, InetAddress(8080));
-  server.setThreadNum(2);
+  server.setThreadNum(8);
 
   const auto index = [](const HttpRequest *req,
                         std::shared_ptr<HttpResponse> res) {
