@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <functional>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -35,10 +36,18 @@ TcpConnection::TcpConnection(EventLoop *loop, const std::string &nameArg,
   channel_->setCloseCallback(std::bind(&TcpConnection::handleClose, this));
   channel_->setErrorCallback(std::bind(&TcpConnection::handleError, this));
 
+  // SPDLOG_LOGGER_INFO(logger, "TcpConnection::ctor[{}] at fd = {}",
+  //                    name_.c_str(), sockfd);
+
   setKeepAlive(sockfd_, true);
 }
 
-TcpConnection::~TcpConnection() {}
+TcpConnection::~TcpConnection() {
+  close(sockfd_);
+  // SPDLOG_LOGGER_INFO(logger, "TcpConnection::dtor[{}] at fd = {} state = {}",
+  //                    name_.c_str(), channel_->fd(),
+  //                    static_cast<int>(state_));
+}
 
 void TcpConnection::send(const std::string &buf) {
   if (state_ == StateE::kConnected) {
@@ -124,12 +133,14 @@ void TcpConnection::shutdownInLoop() {
 void TcpConnection::connectEstablished() {
   setState(StateE::kConnected);
 
+  channel_->tie(shared_from_this());
   channel_->enableReading();
 
   connectionCallback_(shared_from_this());
 }
 
 void TcpConnection::connectDestroyed() {
+  // SPDLOG_LOGGER_INFO(logger, "connectDestroyed");
   if (state_ == StateE::kConnected) {
     setState(StateE::kDisconnected);
     channel_->disableAll();

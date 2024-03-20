@@ -16,6 +16,7 @@ public:
 
   using EventCallback = std::function<void()>;
   Channel(EventLoop *loop, int fd);
+  ~Channel();
 
   void handleEvent();
   void setReadCallback(const EventCallback &cb) {
@@ -30,6 +31,8 @@ public:
   void setErrorCallback(const EventCallback &cb) {
     m_errorCallback = std::move(cb);
   }
+
+  void tie(const std::shared_ptr<void> &);
 
   int fd() const { return m_fd; }
   int events() const { return m_events; }
@@ -64,6 +67,7 @@ public:
 
 private:
   void update();
+  void handleEventWithGuard();
 
   static const int kNoneEvent;
   static const int kReadEvent;
@@ -74,6 +78,9 @@ private:
   int m_events;
   int m_revents;
   int m_state;
+
+  std::weak_ptr<void> tie_;
+  bool tied_;
 
   EventCallback m_readCallback;
   EventCallback m_writeCallback;

@@ -48,7 +48,7 @@ public:
   void connectDestroyed();
 
 private:
-  enum class StateE { kDisconnected, kConnecting, kConnected, kDisconnecting };
+  enum StateE { kDisconnected, kConnecting, kConnected, kDisconnecting };
   void setState(StateE state) { state_ = state; }
   void handleRead();
   void handleWrite();
