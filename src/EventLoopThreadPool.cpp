@@ -21,7 +21,7 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb) {
     snprintf(buf, sizeof(buf), "%s%d", name_.c_str(), i);
     std::string buf_str{buf};
 
-    logger->debug("EventLoopThreadPool::start new EventLoopThread");
+    // logger->debug("EventLoopThreadPool::start new EventLoopThread");
 
     threads_.emplace_back(std::make_unique<EventLoopThread>(cb, buf_str));
     loops_.push_back(threads_.back()->startLoop());

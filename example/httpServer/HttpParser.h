@@ -49,8 +49,8 @@ public:
   }
 
   bool executeParser(Buffer *buf) {
-    logger->debug("buf->readableBytes(): {}", buf->readableBytes());
-    logger->debug("buf: {}", std::string(buf->peek(), buf->readableBytes()));
+    // logger->debug("buf->readableBytes(): {}", buf->readableBytes());
+    // logger->debug("buf: {}", std::string(buf->peek(), buf->readableBytes()));
     size_t parsed = http_parser_execute(parser_.get(), settings_.get(),
                                         buf->peek(), buf->readableBytes());
     if (HTTP_PARSER_ERRNO(parser_.get()) == HPE_OK) {
@@ -90,7 +90,6 @@ public:
 
   void onUrl(const char *at, size_t length) {
     HttpRequest *request = static_cast<HttpRequest *>(message_.get());
-    logger->debug("uri: {}", std::string(at, length));
     request->setUri(std::string(at, length));
   }
 

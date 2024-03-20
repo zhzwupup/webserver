@@ -2,10 +2,18 @@
 #include "HttpParser.h"
 
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <sstream>
 
 class HttpContext {
 public:
+  HttpContext() {
+    // SPDLOG_LOGGER_INFO(logger, "HttpContext::ctor");
+  }
+  ~HttpContext() {
+    // SPDLOG_LOGGER_INFO(logger, "HttpContext::dtor");
+  }
+
   bool parse(Buffer *buf) { return requestParser_->executeParser(buf); }
 
   bool ready() { return requestParser_->complete(); }

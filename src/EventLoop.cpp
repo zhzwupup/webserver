@@ -70,7 +70,7 @@ void EventLoop::loop() {
   m_looping = true;
   m_quit = false;
 
-  logger->info("EventLoop {} start looping", (void *)this);
+  // logger->info("EventLoop {} start looping", (void *)this);
 
   while (!m_quit) {
     m_activeChannels.clear();
@@ -121,7 +121,7 @@ void EventLoop::wakeup() {
 void EventLoop::handleRead() {
   uint64_t one = 1;
   ssize_t n = read(wakeupFd_, &one, sizeof(one));
-  logger->debug("EventLoop::handleRead()");
+  // logger->debug("EventLoop::handleRead()");
   if (n != sizeof(one)) {
     logger->error("EventLoop::handleRead() reads {} bytes instead of 8", n);
   }

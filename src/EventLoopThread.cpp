@@ -23,9 +23,9 @@ EventLoop *EventLoopThread::startLoop() {
   EventLoop *loop = nullptr;
   {
     std::unique_lock<std::mutex> lock(mutex_);
-    logger->debug("EventLoopThread::startLoop start cond wait");
+    // logger->debug("EventLoopThread::startLoop start cond wait");
     cond_.wait(lock, [this]() { return loop_ != nullptr; });
-    logger->debug("EventLoopThread::startLoop end cond wait");
+    // logger->debug("EventLoopThread::startLoop end cond wait");
     loop = loop_;
   }
   return loop;
