@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <strings.h>
 
 void HttpServer::onConnection(const TcpConnectionPtr &conn) {
   if (conn->connected()) {
@@ -36,6 +37,7 @@ void HttpServer::handle(HttpContextPtr context, const TcpConnectionPtr &conn) {
   auto response = context->getResponse();
   auto it = request_handlers_.find(request->uri());
   Buffer output;
+
   if (it == request_handlers_.end()) {
     response->setStatusCode(HTTP_STATUS_NOT_FOUND);
     response->setHeader("Connection", "Close");
@@ -44,6 +46,7 @@ void HttpServer::handle(HttpContextPtr context, const TcpConnectionPtr &conn) {
     conn->shutdown();
     return;
   }
+
   auto callback_it = it->second.find(request->methodString());
   if (callback_it == it->second.end()) {
     response->setStatusCode(HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -53,18 +56,17 @@ void HttpServer::handle(HttpContextPtr context, const TcpConnectionPtr &conn) {
     conn->shutdown();
     return;
   }
+
   callback_it->second(request, response);
 
-  if (request->header("Connection").has_value()) {
-    response->setHeader("Connection", request->header("Connection").value());
-    // response->setHeader("Connection", "Close");
-  } else {
-    // response->setHeader("Connection", "Keep-Alive");
-    response->setHeader("Connection", "Close");
+  if (not request->header("Connection").has_value()) {
+    request->setHeader("Connection", "close");
   }
+  response->setHeader("Connection", request->header("Connection").value());
   response->appendToBuffer(&output);
   conn->send(&output);
-  if (request->header("Connection").value() == "Close") {
+
+  if (strcasecmp(request->header("Connection").value().c_str(), "close") == 0) {
     conn->shutdown();
   }
 
