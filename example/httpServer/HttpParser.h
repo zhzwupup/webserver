@@ -67,6 +67,8 @@ public:
   }
 
   bool complete() { return complete_; }
+  bool upgrade() { return upgrade_; }
+  void setUpgrade(bool websocketOn) { upgrade_ = websocketOn; }
 
 protected:
   virtual void setLeftInformation() = 0;
@@ -77,6 +79,7 @@ protected:
   std::optional<std::string> headerFieldTemp_ = {};
 
   bool complete_ = false;
+  bool upgrade_ = false;
 };
 
 class HttpRequestParser : public HttpParser {

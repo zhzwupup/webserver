@@ -28,5 +28,8 @@ int on_body(http_parser *p, const char *at, size_t length) {
 int on_message_complete(http_parser *p) {
   HttpParser *parser = static_cast<HttpParser *>(p->data);
   parser->onMessageComplete();
+  if (p->upgrade) {
+    parser->setUpgrade(true);
+  }
   return 0;
 }

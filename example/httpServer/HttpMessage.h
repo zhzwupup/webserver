@@ -72,6 +72,7 @@ public:
   void setMethod(http_method method) { method_ = method; }
   void setUri(const std::string &uri) { uri_ = uri; }
 
+  http_method method() const { return method_; }
   std::string methodString() const { return http_method_str(method_); }
   std::string uri() const { return uri_; }
 

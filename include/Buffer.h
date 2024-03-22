@@ -32,6 +32,9 @@ public:
     return retrieveAsString(readableBytes());
   }
 
+  // 调试使用
+  std::string content() { return std::string(peek(), readableBytes()); }
+
   std::string retrieveAsString(size_t len) {
     std::string result(peek(), len);
     retrieve(len);
@@ -61,6 +64,8 @@ public:
   char *beginWrite() { return begin() + writerIndex_; }
 
   const char *beginWrite() const { return begin() + writerIndex_; }
+
+  void hasWritten(size_t len) { writerIndex_ += len; }
 
 private:
   char *begin() { return &(*buffer_.begin()); }

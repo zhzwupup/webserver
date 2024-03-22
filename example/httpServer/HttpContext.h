@@ -20,6 +20,7 @@ public:
   HttpRequest *getRequest() { return requestParser_->getRequest(); }
   std::shared_ptr<HttpResponse> getResponse() { return response_; }
 
+  bool upgrade() { return requestParser_->upgrade(); }
   void reset() { requestParser_.reset(); }
 
 private:
