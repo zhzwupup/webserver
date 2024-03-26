@@ -5,10 +5,12 @@
 #include "TcpContext.h"
 #include "TcpServer.h"
 #include <cstdint>
+#include <sstream>
 
 WebSocketServer::WebSocketServer(EventLoop *loop, const InetAddress &addr,
                                  const std::string name)
     : server_(loop, addr, name) {
+  logger->info("WebSocket Server Run on port {}", addr.toPort());
   server_.setConnectionCallback(
       std::bind(&WebSocketServer::onConnection, this, std::placeholders::_1));
   server_.setMessageCallback(std::bind(&WebSocketServer::onMessage, this,
@@ -27,78 +29,65 @@ void WebSocketServer::onConnection(const TcpConnectionPtr &conn) {
 void WebSocketServer::onMessage(const TcpConnectionPtr &conn, Buffer *buf) {
   TcpContextPtr context = std::any_cast<TcpContextPtr>(conn->getContext());
   if (not context->handshaked()) {
-    std::shared_ptr<HttpContext> httpCtx = context->httpContext();
-
-    if (not httpCtx->parse(buf)) {
-      logger->trace("close connection");
-      return;
-    }
-
-    if (httpCtx->upgrade()) {
-      // 发送握手响应
-      Buffer out;
-      HttpRequest *request = context->httpContext()->getRequest();
-
-      logger->debug("Sec-WebSocket-Key: {}",
-                    request->header("Sec-WebSocket-Key").value());
-      responseHandShake(&out, request->header("Sec-WebSocket-Key").value());
-      conn->send(&out);
-      context->setHandshaked();
-      return;
-    }
-
-    // 正常 http 请求处理
-    if (httpCtx->ready()) {
-      handleHttp(context, conn);
-    }
+    handleHttp(conn, buf);
   } else {
-    // websocket 数据帧处理
-    handleWs(context, conn, buf);
+    handleWs(conn, buf);
   }
 }
 
-// void WebSocketServer::handle(const TcpContextPtr &context,
-//                              const TcpConnectionPtr &conn) {
-//   if (not context->handshaked()) {
-//     HttpContextPtr httpCtx = context->httpContext();
-//     handleHttp(context, conn);
-//   } else {
-//     WebSocketContextPtr wsCtx = context->wsContext();
-//     handleWs(context, conn);
-//   }
-// }
+void sendCloseResponse(http_status statusCode,
+                       std::shared_ptr<HttpResponse> response,
+                       const TcpConnectionPtr &conn, Buffer *buf) {
+  response->setStatusCode(statusCode);
+  response->setHeader("Connection", "Close");
+  response->appendToBuffer(buf);
+  conn->send(buf);
+  conn->shutdown();
 
-void WebSocketServer::handleHttp(const TcpContextPtr &context,
-                                 const TcpConnectionPtr &conn) {
+  return;
+}
+
+void WebSocketServer::handleHttp(const TcpConnectionPtr &conn, Buffer *buf) {
+
+  TcpContextPtr context = std::any_cast<TcpContextPtr>(conn->getContext());
+  std::shared_ptr<HttpContext> httpCtx = context->httpContext();
+
+  if (not httpCtx->parse(buf)) {
+    logger->trace("close connection");
+    return;
+  }
+
+  if (httpCtx->upgrade()) {
+    // 发送握手响应
+    Buffer out;
+    HttpRequest *request = context->httpContext()->getRequest();
+
+    logger->debug("Sec-WebSocket-Key: {}",
+                  request->header("Sec-WebSocket-Key").value());
+    responseHandShake(&out, request->header("Sec-WebSocket-Key").value());
+    conn->send(&out);
+    context->setHandshaked();
+    return;
+  }
+
+  if (not httpCtx->ready()) {
+    return;
+  }
+
+  // 正常 http 请求处理
   HttpRequest *request = context->httpContext()->getRequest();
   auto response = context->httpContext()->getResponse();
   auto it = request_handlers_.find(request->uri());
   Buffer output;
 
-  // if (isHandShakeReq(*request)) {
-  //   Buffer buf;
-  //   responseHandShake(&buf, request->header("Sec-WebSocket-Key").value());
-  //   context->setHandshaked();
-  //   conn->send(&buf);
-  //   return;
-  // }
-
   if (it == request_handlers_.end()) {
-    response->setStatusCode(HTTP_STATUS_NOT_FOUND);
-    response->setHeader("Connection", "Close");
-    response->appendToBuffer(&output);
-    conn->send(&output);
-    conn->shutdown();
+    sendCloseResponse(HTTP_STATUS_NOT_FOUND, response, conn, &output);
     return;
   }
 
   auto callback_it = it->second.find(request->methodString());
   if (callback_it == it->second.end()) {
-    response->setStatusCode(HTTP_STATUS_METHOD_NOT_ALLOWED);
-    response->setHeader("Connection", "Close");
-    response->appendToBuffer(&output);
-    conn->send(&output);
-    conn->shutdown();
+    sendCloseResponse(HTTP_STATUS_METHOD_NOT_ALLOWED, response, conn, &output);
     return;
   }
 
@@ -117,16 +106,6 @@ void WebSocketServer::handleHttp(const TcpContextPtr &context,
   return;
 }
 
-// bool WebSocketServer::isHandShakeReq(const HttpRequest &req) {
-//   bool ishandShake =
-//       req.method() == HTTP_GET and req.versionString() == "HTTP/1.1" and
-//       req.header("Upgrade").value_or("") == "websocket" and
-//       req.header("Connection").value_or("") == "Upgrade" and
-//       req.header("Sec-WebSocket-Version").value_or("") == "13" and
-//       (not req.header("Sec-WebSocket-Key").value_or("").empty());
-//   return ishandShake;
-// }
-
 void WebSocketServer::responseHandShake(Buffer *buf,
                                         const std::string &websocketKey) {
   buf->append("HTTP/1.1 101 Switching Protocols\r\n"
@@ -139,8 +118,8 @@ void WebSocketServer::responseHandShake(Buffer *buf,
               "\r\n\r\n");
 }
 
-void WebSocketServer::handleWs(const TcpContextPtr &context,
-                               const TcpConnectionPtr &conn, Buffer *buf) {
+void WebSocketServer::handleWs(const TcpConnectionPtr &conn, Buffer *buf) {
+  TcpContextPtr context = std::any_cast<TcpContextPtr>(conn->getContext());
   std::shared_ptr<WebSocketContext> wsCtx = context->wsContext();
   if (not wsCtx->decode(buf)) {
     logger->info("invalid websocket message");
@@ -158,19 +137,21 @@ void WebSocketServer::handleWs(const TcpContextPtr &context,
                  opcode == frame::opcode::BINARY) {
         // TODO 定时器
 
-        if (opcode == frame::opcode::TEXT and textMessageCallback_) {
+        if (opcode == frame::opcode::TEXT) {
           logger->debug("websocket payload: {}",
                         wsCtx->reqData().payload().content());
-          textMessageCallback_(conn,
-                               std::string(reqData.payload().peek(),
-                                           reqData.payload().readableBytes()),
-                               false);
+          // textMessageCallback_(conn,
+          //                      std::string(reqData.payload().peek(),
+          //                                  reqData.payload().readableBytes()),
+          //                      false);
+          handleWsTextMessage(conn,
+                              std::string(reqData.payload().peek(),
+                                          reqData.payload().readableBytes()),
+                              false);
         }
         if (opcode == frame::opcode::BINARY and binaryMessageCallback_) {
-          textMessageCallback_(conn,
-                               std::string(reqData.payload().peek(),
-                                           reqData.payload().readableBytes()),
-                               false);
+          binaryMessageCallback_(conn, reqData.payload().peek(),
+                                 reqData.payload().readableBytes(), false);
         }
       } else if (opcode == frame::opcode::CLOSE) {
         conn->shutdown();
@@ -178,5 +159,23 @@ void WebSocketServer::handleWs(const TcpContextPtr &context,
       wsCtx->reset();
     }
   }
+  return;
+}
+
+void WebSocketServer::handleWsTextMessage(const TcpConnectionPtr &conn,
+                                          const std::string &message,
+                                          bool mask) {
+  auto callback_it = ws_text_handlers_.find(message);
+  if (callback_it == ws_text_handlers_.end()) {
+    Buffer payload;
+    std::ostringstream oss;
+    oss << "server received message:\n" << message;
+    payload.append(oss.str());
+    Buffer buf;
+    WebSocketContext::makeFrame(&buf, frame::opcode::TEXT, mask, &payload);
+    conn->send(&buf);
+    return;
+  }
+  callback_it->second(conn, mask);
   return;
 }

@@ -7,6 +7,7 @@
 
 using HttpRequestHandler =
     std::function<void(const HttpRequest *, std::shared_ptr<HttpResponse>)>;
+using WsTextHandler = std::function<void(const TcpConnectionPtr &, bool mask)>;
 
 class WebSocketServer {
 public:
@@ -35,12 +36,18 @@ public:
   void setThreadNums(int numThreads) { server_.setThreadNum(numThreads); }
 
   // void handle(const TcpContextPtr &, const TcpConnectionPtr &);
-  void handleHttp(const TcpContextPtr &, const TcpConnectionPtr &);
-  void handleWs(const TcpContextPtr &, const TcpConnectionPtr &, Buffer *buf);
+  void handleHttp(const TcpConnectionPtr &, Buffer *);
+  void handleWs(const TcpConnectionPtr &, Buffer *);
+  void handleWsTextMessage(const TcpConnectionPtr &conn,
+                           const std::string &message, bool mask);
 
   void RegisterHttpRequestHandler(const std::string &path, std::string method,
                                   const HttpRequestHandler callback) {
     request_handlers_[path].insert(std::make_pair(method, std::move(callback)));
+  }
+  void RegisterWsTextHandler(const std::string &message,
+                             const WsTextHandler callback) {
+    ws_text_handlers_.insert({message, callback});
   }
 
 private:
@@ -63,4 +70,5 @@ private:
   BinaryMessageCallback binaryMessageCallback_;
   std::map<std::string, std::map<std::string, HttpRequestHandler>>
       request_handlers_;
+  std::map<std::string, WsTextHandler> ws_text_handlers_;
 };

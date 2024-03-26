@@ -11,15 +11,6 @@ auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 __attribute__((visibility("default"))) std::shared_ptr<spdlog::logger> logger =
     std::make_shared<spdlog::logger>("console", console_sink);
 
-void sendText(const TcpConnectionPtr &conn, const std::string &data,
-              bool mask) {
-  Buffer payload;
-  payload.append(&(*data.begin()), data.size());
-  Buffer buf;
-  WebSocketContext::makeFrame(&buf, frame::opcode::TEXT, mask, &payload);
-  conn->send(&buf);
-}
-
 void sendBinary(const TcpConnectionPtr &conn, const char *data, size_t len,
                 bool mask) {
   Buffer payload;
@@ -45,15 +36,18 @@ int main() {
     res->setHeader("Content-Type", "text/plain");
   };
 
-  const auto game = [](const HttpRequest *req,
-                       std::shared_ptr<HttpResponse> res) {
-
+  const auto hello = [](const TcpConnectionPtr &conn, bool mask) {
+    Buffer payload;
+    payload.append("server received hello from client");
+    Buffer buf;
+    WebSocketContext::makeFrame(&buf, frame::opcode::TEXT, mask, &payload);
+    conn->send(&buf);
   };
 
   server.RegisterHttpRequestHandler("/", "GET", index);
   // server.RegisterHttpRequestHandler("/game", "GET", game);
   // server.setConnectionCallback(onConnection);
-  server.setTextMessageCallback(sendText);
+  server.RegisterWsTextHandler("hello", hello);
   server.setBinaryMessageCallback(sendBinary);
 
   server.start();
