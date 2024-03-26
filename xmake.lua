@@ -55,3 +55,5 @@ target("wsServer")
   set_toolchains("gcc13")
   add_cxxflags("-std=c++23")
 
+
+includes("./tests/xmake.lua")
