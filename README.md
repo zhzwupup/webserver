@@ -1,20 +1,22 @@
 
 # Table of Contents
 
-1.  [新连接](#org83778f1)
-2.  [事件轮询](#orga4afa0e)
-3.  [TcpConnection 回调函数](#orgba32ed1)
+1.  [新连接](#org0ee456d)
+2.  [事件轮询](#org719bab5)
+3.  [TcpConnection 回调函数](#orgde78ce8)
+4.  [压力测试](#orgf190389)
+5.  [WebSocket 测试](#org9bb68f2)
 
 
 
-<a id="org83778f1"></a>
+<a id="org0ee456d"></a>
 
 # 新连接
 
 ![img](assets/newconnection.jpg)
 
 
-<a id="orga4afa0e"></a>
+<a id="org719bab5"></a>
 
 # 事件轮询
 
@@ -92,7 +94,7 @@ Acceptor 中的 Channel 成员关注新连接，客户端连接服务器导致 C
 </table>
 
 
-<a id="orgba32ed1"></a>
+<a id="orgde78ce8"></a>
 
 # TcpConnection 回调函数
 
@@ -140,4 +142,18 @@ TCP 网络编程最本质的是处理三个半事件
 4.  消息发送完毕（半个事件）。低流量服务，可以不关心这个事件。
 
 连接的建立、消息到达和消息发送完毕这两个半事件的处理交给应用层实现。
+
+
+<a id="orgf190389"></a>
+
+# 压力测试
+
+![img](assets/webbench_test.png)
+
+
+<a id="org9bb68f2"></a>
+
+# WebSocket 测试
+
+![img](assets/websocket_test.png)
 
